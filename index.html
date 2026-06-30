@@ -219,8 +219,28 @@ async function loadFFmpeg() {
   progressText.textContent = "Loading video engine...";
 
   try {
-    const { FFmpeg } = await import('https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/esm/index.js');
-    const { fetchFile } = await import('https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js');
+    // Load the tiny UMD scripts from our own origin (3.4kB + 2.7kB — well under 25MB limit).
+    // Webpack derives e.p (publicPath) from the <script src>, so when served from our domain,
+    // the worker chunk (814.ffmpeg.js) resolves to the same origin — no SecurityError.
+    await new Promise((resolve, reject) => {
+      if (window.FFmpegWASM) return resolve();
+      const s = document.createElement('script');
+      s.src = '/ffmpeg-mini/ffmpeg.js';
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+    await new Promise((resolve, reject) => {
+      if (window.FFmpegUtil) return resolve();
+      const s = document.createElement('script');
+      s.src = 'https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js';
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+
+    const { FFmpeg } = window.FFmpegWASM;
+    const { fetchFile } = window.FFmpegUtil;
     window.fetchFile = fetchFile;
 
     const ff = new FFmpeg();
@@ -228,6 +248,7 @@ async function loadFFmpeg() {
       progressText.textContent = `Rendering: ${Math.round(progress * 100)}%`;
     });
 
+    // Core WASM loaded from CDN via importScripts() inside the worker — no cross-origin restriction.
     await ff.load({
       coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
       wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
