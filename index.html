@@ -229,7 +229,7 @@ async function loadFFmpeg() {
   if (ffmpeg && ffmpeg.loaded) return ffmpeg;
   progressText.textContent = "Loading video engine... 0%";
   
-  await loadScript("https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/umd/ffmpeg.js");
+  await loadScript("https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/umd/ffmpeg.js");
   await loadScript("https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js");
   
   const { FFmpeg } = window.FFmpegWASM;
@@ -246,7 +246,7 @@ async function loadFFmpeg() {
     const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
     const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
     const classWorkerURL = await toBlobURL(
-        "https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/umd/814.ffmpeg.js",
+        "https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/umd/814.ffmpeg.js",
         'text/javascript'
     );
 
