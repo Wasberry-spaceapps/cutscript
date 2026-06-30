@@ -214,43 +214,24 @@ function showToast(msg, isError=true) {
   setTimeout(() => toast.classList.remove('show'), 5000);
 }
 
-function loadScript(src) {
-  return new Promise((resolve, reject) => {
-    if (document.querySelector(`script[src="${src}"]`)) return resolve();
-    const script = document.createElement('script');
-    script.src = src;
-    script.onload = resolve;
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
-}
-
 async function loadFFmpeg() {
   if (ffmpeg && ffmpeg.loaded) return ffmpeg;
-  progressText.textContent = "Loading video engine... 0%";
-  
-  await loadScript("https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/umd/ffmpeg.js");
-  await loadScript("https://unpkg.com/@ffmpeg/util@0.12.1/dist/umd/index.js");
-  
-  const { FFmpeg } = window.FFmpegWASM;
-  const { fetchFile, toBlobURL } = window.FFmpegUtil;
-  window.fetchFile = fetchFile;
-  
-  const ff = new FFmpeg();
-  ff.on('progress', ({ progress }) => {
-    progressText.textContent = `Loading video engine... ${Math.round(progress * 100)}%`;
-  });
+  progressText.textContent = "Loading video engine...";
 
   try {
-    const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd";
-    const coreURL = await toBlobURL(`${baseURL}/ffmpeg-core.js`, 'text/javascript');
-    const wasmURL = await toBlobURL(`${baseURL}/ffmpeg-core.wasm`, 'application/wasm');
-    const classWorkerURL = await toBlobURL(
-        "https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist/umd/814.ffmpeg.js",
-        'text/javascript'
-    );
+    const { FFmpeg } = await import('https://unpkg.com/@ffmpeg/ffmpeg@0.12.6/dist/esm/index.js');
+    const { fetchFile } = await import('https://unpkg.com/@ffmpeg/util@0.12.1/dist/esm/index.js');
+    window.fetchFile = fetchFile;
 
-    await ff.load({ coreURL, wasmURL, classWorkerURL });
+    const ff = new FFmpeg();
+    ff.on('progress', ({ progress }) => {
+      progressText.textContent = `Rendering: ${Math.round(progress * 100)}%`;
+    });
+
+    await ff.load({
+      coreURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.js',
+      wasmURL: 'https://unpkg.com/@ffmpeg/core@0.12.6/dist/umd/ffmpeg-core.wasm',
+    });
 
     progressText.textContent = "";
     ffmpeg = ff;
@@ -331,7 +312,7 @@ transcribeBtn.addEventListener('click', async () => {
   try {
     progressText.textContent = "Extracting audio...";
     
-    await ff.writeFile('input', await fetchFile(currentFile));
+    await ff.writeFile('input', await window.fetchFile(currentFile));
     const code = await ff.exec(['-i', 'input', '-ar', '16000', '-ac', '1', '-b:a', '32k', 'output.mp3']);
     
     if (code !== 0) {
@@ -792,6 +773,7 @@ exportBtn.addEventListener('click', async () => {
   });
   
   try {
+    await ff.writeFile('input', await window.fetchFile(currentFile));
     const code = await ff.exec([
       '-i', 'input', 
       '-filter_complex', filterComplex, 
