@@ -146,9 +146,9 @@ canvas { display: block; width: 100%; height: 100%; }
     </div>
     <div id="transcriptContent" class="transcript-content"></div>
     <div id="floatingToolbar" class="floating-toolbar">
-      <button id="btnDeleteSeg">🗑 Delete segment</button>
-      <button id="btnPreviewSeg">▶ Preview</button>
-      <button id="btnCancelSeg">✕ Cancel</button>
+      <button id="btnDeleteSeg" onmousedown="event.preventDefault()">🗑 Delete segment</button>
+      <button id="btnPreviewSeg" onmousedown="event.preventDefault()">▶ Preview</button>
+      <button id="btnCancelSeg" onmousedown="event.preventDefault()">✕ Cancel</button>
     </div>
   </div>
 </div>
@@ -631,6 +631,20 @@ function updateStats() {
 }
 
 document.addEventListener('keydown', (e) => {
+  if ((e.key === 'Delete' || e.key === 'Backspace') && pendingSelection && !e.ctrlKey && !e.metaKey) {
+    const active = document.activeElement;
+    if (!active || (active.tagName !== 'INPUT' && active.tagName !== 'TEXTAREA')) {
+      e.preventDefault();
+      const newCut = { start: pendingSelection.start, end: pendingSelection.end };
+      applyCut(newCut, pendingSelection.spans);
+      undoStack.push({ type: 'add', cut: newCut, spans: pendingSelection.spans });
+      redoStack = [];
+      floatingToolbar.style.display = 'none';
+      window.getSelection().removeAllRanges();
+      pendingSelection = null;
+      return;
+    }
+  }
   if (e.ctrlKey || e.metaKey) {
     if (e.key === 'z' && !e.shiftKey) {
       e.preventDefault();
